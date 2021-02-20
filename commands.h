@@ -9,5 +9,3 @@ CPU("pow", POW, 7, no_arguments_handler)
 CPU("fsqrt", FSQRT, 8, no_arguments_handler)
 CPU("print", PRINT, 9, no_arguments_handler)
 CPU("in", IN, 10, no_arguments_handler)
-
-//const char* commands_name[] = {"out", "add", "sub", "mul", "div", "push", "pop", "pow", "fsqrt", "print", "in"};
