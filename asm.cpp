@@ -109,10 +109,10 @@ void assembling (buff* buffer)
     
     while (begin_buf + buffer->size - buffer->text > 0 && (token = strtok(buffer->text, "\r")) != NULL)
     {
-        #define CPU(name_of_command, name_code_of_command, code_of_command, in_handler)         \
-        if (!strcmp(token, name_of_command) || !strcmp(strtok(token, " "), name_of_command))    \
-        {                                                                                       \
-            in_handler(output, buffer, code_of_command);                                        \
+        #define CPU(name_of_command, name_code_of_command, code_of_command, in_handler, out_handler)            \
+        if (!strcmp(token, name_of_command) || !strcmp(strtok(token, " "), name_of_command))                    \
+        {                                                                                                       \
+            in_handler(output, buffer, code_of_command);                                                        \
         }
         #include "commands.h"
         #undef CPU
@@ -124,7 +124,7 @@ void assembling (buff* buffer)
 
     buffer->text = begin_buf;
 
-    return ;
+    return;
 }
 
 //------------------------------------------------------------------------------------------------------
