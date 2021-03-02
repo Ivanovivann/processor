@@ -1,21 +1,24 @@
-push 1
-in
-pop ax
-push ax
-call fact
-pop
-out
-hlt
+    push 1
+    in
+    pop ax
+    push ax
+    call fact
+    pop
+    out
+    hlt
+
 fact:
-mul
-push ax
-push 1
-sub
-pop ax
-push ax
-push 1
-push ax
-jae L1
-call fact
-L1:
-ret
+    mul
+    push ax
+    push 1
+    sub
+    pop ax
+    push ax
+    push 1
+    push ax
+    
+    jae L1
+        call fact
+    L1:
+    
+    ret
