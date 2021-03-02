@@ -119,7 +119,7 @@ void one_argument_handler (double* commands, buff* buffer, int command_number, u
             labels[i].name[strlen(labels[i].name) - 1] = 0;
             if (labels[i].name && !strcmp(token, labels[i].name))
             {
-                commands[(*address) - 1] = labels[i].address; //TODO: если повтор метки о бан
+                commands[(*address) - 1] = labels[i].address;
             }
             labels[i].name[strlen(labels[i].name)] = ':';
         }
