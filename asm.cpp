@@ -4,6 +4,9 @@
 #include <ctype.h>
 #include <assert.h>
 
+//TODO: asserts
+//TODO: первая строчка в файле асма это код типа расширения потом версия команд и количество команд
+
 //------------------------------------------------------------------------------------------------------
 
 typedef struct{
@@ -42,7 +45,7 @@ void free_buffer (buff* buffer);
 
 int main(int argc, char *argv[])
 {
-    buff* buffer = (buff*) calloc(1, sizeof(buff));
+    buff buffer = {};
     
     if (argc < 2)
     {
@@ -50,11 +53,11 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    buffer = reading_file (buffer, argv[1]);
+    //buffer = reading_file (&buffer, argv[1]);
 
-    assembling (buffer);
+    assembling (reading_file (&buffer, argv[1]));
 
-    free_buffer(buffer);
+    free_buffer(&buffer);
 
     return 0;
 }
@@ -63,6 +66,7 @@ int main(int argc, char *argv[])
 
 size_t size_of_file (FILE* text)
 {
+    assert(text);
     fseek(text, 0, SEEK_END); 
 
     size_t size_of_file = ftell(text);
@@ -315,10 +319,12 @@ void filling_commands(char* begin_buf, buff* buffer, label* labels, double* comm
 void print_in_file (double* arr_of_commands, int size)
 {
     assert(arr_of_commands);
+    assert(size);
+
     FILE* output = fopen("asm_out.txt", "w");
-    
     assert(output);
 
+    fprintf(output, "iwanou_222_brrr! 2.0 %d\n", size);
     for (int i = 0; i < size; i++)
     {
         fprintf(output, "%lg\n", arr_of_commands[i]);
@@ -331,6 +337,7 @@ void print_in_file (double* arr_of_commands, int size)
 
 void free_buffer (buff* buffer)
 {
+    assert(buffer);
     free(buffer->text);
-    free(buffer);
+    buffer->text = nullptr;
 }
