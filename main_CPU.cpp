@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
 
     CPU_construct (&proc);
 
-    buff* buffer = (buff*) calloc(1, sizeof(buff));
+    buff buffer = {};
 
     if (argc < 2)
     {
@@ -16,11 +16,9 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    buffer = reading_file (buffer, argv[1]);
+    processor_doing_brrr(&proc, reading_file (&buffer, argv[1]));
 
-    processor_doing_brrr(&proc, buffer);
-
-    free_buffer(buffer);
+    free_buffer(&buffer);
     CPU_destruct(&proc);
 
     return 0;
