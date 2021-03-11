@@ -31,22 +31,6 @@ void CPU_destruct (CPU* proc)
 
 //------------------------------------------------------------------------------------------------------
 
-// size_t count_of_commands (FILE* text)
-// {
-//     char c = 0;
-//     size_t counter = 0;
-
-//     while ((c = getc(text)) != EOF)
-//     {
-//         if (c == '\n' || c == ' ')
-//             counter++;
-//     }
-//     rewind(text);
-//     return counter;
-// }
-
-//------------------------------------------------------------------------------------------------------
-
 buff* reading_file (buff* buffer, char* name_of_file)
 {
     assert(buffer);
