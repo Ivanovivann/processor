@@ -9,8 +9,11 @@
 #include <math.h>
 #include "stack.h"
 
+#define ASSERT_OK   assert(proc);       \
+                    assert(buffer);
+
 typedef struct buff{
-    double* text;
+    unsigned char* text;
     size_t size;
 }buff;
 
@@ -20,6 +23,7 @@ typedef struct
     Stack* stack_call;
     unsigned rip;
     double* registers;
+    double* RAM;
 }CPU;
 
 //------------------------------------------------------------------------------------------------------
@@ -28,7 +32,7 @@ void CPU_construct (CPU* proc);
 
 void CPU_destruct (CPU* proc);
 
-size_t count_of_commands (FILE* text);
+size_t size_of_file (FILE* text);
 
 buff* reading_file (buff* text, char* name_of_file);
 
@@ -43,14 +47,6 @@ void sub (CPU* proc, buff* buffer);
 void mul (CPU* proc, buff* buffer);
 
 void div (CPU* proc, buff* buffer);
-
-void classic_pop (CPU* proc, buff* buffer);
-
-void reg_pop (CPU* proc, buff* buffer);
-
-void number_push (CPU* proc, buff* buffer);
-
-void reg_push (CPU* proc, buff* buffer);
 
 void push (CPU* proc, buff* buffer);
 
