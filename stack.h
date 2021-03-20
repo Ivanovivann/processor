@@ -1,6 +1,13 @@
 #ifndef SAS_STACK_H
 #define SAS_STACK_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <assert.h>
+#include <math.h>
+
 //===============================================================================================
 
 #define BEGIN_CAPACITY 2
