@@ -13,6 +13,8 @@ void CPU_construct (CPU* proc)
     construct_stack(proc->stack_call);
     proc->registers = (double*) calloc(4, sizeof(double));
     assert(proc->registers);
+    proc->RAM = (double*) calloc(2000, sizeof(double));
+    assert(proc->RAM);
 }
 
 //------------------------------------------------------------------------------------------------------
@@ -21,6 +23,8 @@ void CPU_destruct (CPU* proc)
 {
     free(proc->registers);
     proc->registers = nullptr;
+    free(proc->RAM);
+    proc->RAM = nullptr;
     destruct_stack(proc->stack_data);
     destruct_stack(proc->stack_call);
     free(proc->stack_data);
@@ -31,33 +35,35 @@ void CPU_destruct (CPU* proc)
 
 //------------------------------------------------------------------------------------------------------
 
+size_t size_of_file (FILE* text)
+{
+    assert(text);
+    fseek(text, 0, SEEK_END); 
+
+    size_t size_of_file = ftell(text);
+    assert(size_of_file);
+    
+    rewind(text);
+
+    return size_of_file + 1;
+}
+
+//------------------------------------------------------------------------------------------------------
+
 buff* reading_file (buff* buffer, char* name_of_file)
 {
     assert(buffer);
     assert(name_of_file);
 
-    FILE* input = fopen(name_of_file, "r");
+    FILE* input = fopen(name_of_file, "rb");
     assert(input && "Problems with opening the file");
 
-    char argument[100];
-    double version_of_commands = 0;
-
-    fscanf(input, "%s", argument);
-    assert(!strcmp(argument, "iwanou_222_brrr!"));
+    buffer->size = size_of_file (input);
     
-    fscanf(input, "%lg", &version_of_commands);
-    assert(version_of_commands == 2);
-
-    fscanf(input, "%ld", &buffer->size);
-    assert(buffer->size);
-    
-    buffer->text = (double*) calloc(buffer->size, sizeof(double));
+    buffer->text = (unsigned char*) calloc(buffer->size, sizeof(unsigned char));
     assert(buffer->text);
 
-    for (int i = 0; i < buffer->size; i++)
-    {
-        fscanf(input, "%lg", buffer->text + i);
-    }
+    fread(buffer->text, sizeof(char), buffer->size, input);
 
     fclose(input);
 
@@ -90,8 +96,8 @@ void processor_doing_brrr (CPU* proc, buff* buffer)
 
 void hlt (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     proc->rip = buffer->size;
 }
 
@@ -99,8 +105,8 @@ void hlt (CPU* proc, buff* buffer)
 
 void add (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0, b = 0;
 
     pop_stack(proc->stack_data, &a);
@@ -113,8 +119,8 @@ void add (CPU* proc, buff* buffer)
 
 void sub (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0, b = 0;
 
     pop_stack(proc->stack_data, &a);
@@ -127,8 +133,8 @@ void sub (CPU* proc, buff* buffer)
 
 void mul (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+    
     double a = 0, b = 0;
 
     pop_stack(proc->stack_data, &a);
@@ -141,8 +147,8 @@ void mul (CPU* proc, buff* buffer)
 
 void div (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0, b = 0;
 
     pop_stack(proc->stack_data, &a);
@@ -153,67 +159,88 @@ void div (CPU* proc, buff* buffer)
 
 //------------------------------------------------------------------------------------------------------
 
-void classic_pop (CPU* proc, buff* buffer)
-{
-    assert(proc);
-    assert(buffer);
-    double a = 0;
-    pop_stack(proc->stack_data, &a);
-}
-
-//------------------------------------------------------------------------------------------------------
-
-void reg_pop (CPU* proc, buff* buffer)
-{
-    assert(proc);
-    assert(buffer);
-    double a = 0;
-    pop_stack (proc->stack_data, &a);
-    proc->registers[(int) buffer->text[proc->rip++]] = a;
-}
-
-//------------------------------------------------------------------------------------------------------
-
-void number_push (CPU* proc, buff* buffer)
-{
-    assert(proc);
-    assert(buffer);
-    push_stack (proc->stack_data, buffer->text[proc->rip++]);
-}
-
-//------------------------------------------------------------------------------------------------------
-
-void reg_push (CPU* proc, buff* buffer)
-{
-    assert(proc);
-    assert(buffer);
-    push_stack (proc->stack_data, proc->registers[(int) buffer->text[proc->rip++]]);
-}
-
-//------------------------------------------------------------------------------------------------------
-
 void push (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
-    printf("error of asm push\n");
+    ASSERT_OK;
+
+    
+
+    if (buffer->text[proc->rip] & (1 << 7))
+    {
+        switch ((buffer->text[proc->rip] & (7 << 4)) >> 4)
+        {
+            case 1:                                 // only register
+                push_stack (proc->stack_data, proc->registers[(buffer->text[proc->rip] & (3 << 2)) >> 2]);
+                break;
+            case 2:                                 // only number
+                push_stack (proc->stack_data, (*(double*)(buffer->text + proc->rip + 1)));
+                proc->rip += sizeof(double);
+                break;
+            case 5:                                 // RAM and register
+                push_stack (proc->stack_data, proc->RAM[(int)proc->registers[(buffer->text[proc->rip] & (3 << 2)) >> 2]]);
+                break;
+            case 6:                                 // RAM and number
+                push_stack (proc->stack_data, proc->RAM[(int)(*(double*)(buffer->text + proc->rip + 1))]);
+                proc->rip += sizeof(double);
+                break;
+            case 7:                                 // RAM, register and number
+                push_stack (proc->stack_data, proc->RAM[(int)(*(double*)(buffer->text + proc->rip + 1)) + (int)proc->registers[(buffer->text[proc->rip] & (3 << 2)) >> 2]]);
+                proc->rip += sizeof(double);
+                break;
+            default:
+                printf("NO, NO, THAT'S NOT TRUE. IT'S IMPOSSIBLE PUSH!!!\n");
+        }
+    }
+    else
+    {
+        printf("error: push without arguments\n");
+    }
+    proc->rip++;
 }
 
 //------------------------------------------------------------------------------------------------------
 
 void pop (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
-    printf("error of asm pop\n");
+    ASSERT_OK;
+
+    double a = 0;
+    int error = pop_stack (proc->stack_data, &a);
+    assert(!error);
+
+    if (buffer->text[proc->rip] & (1 << 7))
+    {
+        switch ((buffer->text[proc->rip] & (7 << 4)) >> 4)
+        {
+            case 1:                                 // only register
+                proc->registers[(buffer->text[proc->rip] & (3 << 2)) >> 2] = a;
+                break;
+            case 5:                                 // RAM and register
+                proc->RAM[(int)proc->registers[(buffer->text[proc->rip] & (3 << 2)) >> 2]] = a;
+                break;
+            case 6:                                 // RAM and number
+                proc->RAM[(int)(*(double*)(buffer->text + proc->rip + 1))] = a;
+                proc->rip += sizeof(double);
+                break;
+            case 7:                                 // RAM, register and number
+                proc->RAM[(int)(*(double*)(buffer->text + proc->rip + 1)) + (int)proc->registers[(buffer->text[proc->rip] & (3 << 2)) >> 2]] = a;
+                proc->rip += sizeof(double);
+                break;
+            default:
+                printf("NO, NO, THAT'S NOT TRUE. IT'S IMPOSSIBLE POP!!!\n");
+        }
+    }
+    
+    proc->rip++;
+
 }
 
 //------------------------------------------------------------------------------------------------------
 
 void pow (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0, b = 0;
 
     pop_stack(proc->stack_data, &a);
@@ -226,8 +253,8 @@ void pow (CPU* proc, buff* buffer)
 
 void fsqrt (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0;
 
     pop_stack(proc->stack_data, &a);
@@ -239,8 +266,8 @@ void fsqrt (CPU* proc, buff* buffer)
 
 void out (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0;
     if (proc->stack_data->size)
     {
@@ -257,8 +284,8 @@ void out (CPU* proc, buff* buffer)
 
 void in (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0;
 
     scanf("%lg", &a);
@@ -270,17 +297,17 @@ void in (CPU* proc, buff* buffer)
 
 void jmp (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
-    proc->rip = buffer->text[proc->rip];
+    ASSERT_OK;
+
+    proc->rip = *((double*)(buffer->text + proc->rip));
 }
 
 //------------------------------------------------------------------------------------------------------
 
 void jb (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0, b = 0;
 
     pop_stack(proc->stack_data, &a);
@@ -288,18 +315,19 @@ void jb (CPU* proc, buff* buffer)
 
     if(b < a)
     {
-        proc->rip = buffer->text[proc->rip];
+        proc->rip = *((double*)(buffer->text + proc->rip));
     }
     else
-        proc->rip++;
+        proc->rip += sizeof(double);
+
 }
 
 //------------------------------------------------------------------------------------------------------
 
 void jbe (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0, b = 0;
 
     pop_stack(proc->stack_data, &a);
@@ -307,10 +335,10 @@ void jbe (CPU* proc, buff* buffer)
 
     if(b <= a)
     {
-        proc->rip = buffer->text[proc->rip];
+        proc->rip = *((double*)(buffer->text + proc->rip));
     }
     else
-        proc->rip++;
+        proc->rip += sizeof(double);
 
 }
 
@@ -318,8 +346,8 @@ void jbe (CPU* proc, buff* buffer)
 
 void ja (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0, b = 0;
 
     pop_stack(proc->stack_data, &a);
@@ -327,10 +355,10 @@ void ja (CPU* proc, buff* buffer)
 
     if(b > a)
     {
-        proc->rip = buffer->text[proc->rip];
+        proc->rip = *((double*)(buffer->text + proc->rip));
     }
     else
-        proc->rip++;
+        proc->rip += sizeof(double);
 
 }
 
@@ -338,8 +366,8 @@ void ja (CPU* proc, buff* buffer)
 
 void jae (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0, b = 0;
 
     pop_stack(proc->stack_data, &a);
@@ -347,10 +375,10 @@ void jae (CPU* proc, buff* buffer)
 
     if(b >= a)
     {
-        proc->rip = buffer->text[proc->rip];
+        proc->rip = *((double*)(buffer->text + proc->rip));
     }
     else
-        proc->rip++;
+        proc->rip += sizeof(double);
 
 }
 
@@ -358,8 +386,8 @@ void jae (CPU* proc, buff* buffer)
 
 void je (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0, b = 0;
 
     pop_stack(proc->stack_data, &a);
@@ -367,10 +395,10 @@ void je (CPU* proc, buff* buffer)
 
     if(b == a)
     {
-        proc->rip = buffer->text[proc->rip];
+        proc->rip = *((double*)(buffer->text + proc->rip));
     }
     else
-         proc->rip++;
+        proc->rip += sizeof(double);
 
 }
 
@@ -378,8 +406,8 @@ void je (CPU* proc, buff* buffer)
 
 void jne (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0, b = 0;
 
     pop_stack(proc->stack_data, &a);
@@ -387,10 +415,10 @@ void jne (CPU* proc, buff* buffer)
 
     if(b != a)
     {
-        proc->rip = buffer->text[proc->rip];
+        proc->rip = *((double*)(buffer->text + proc->rip));
     }
     else
-        proc->rip++;
+        proc->rip += sizeof(double);
 
 }
 
@@ -398,18 +426,18 @@ void jne (CPU* proc, buff* buffer)
 
 void call (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
-    push_stack(proc->stack_call, proc->rip + 1);
-    proc->rip = buffer->text[proc->rip];
+    ASSERT_OK;
+
+    push_stack(proc->stack_call, (double)(proc->rip + sizeof(double)));
+    proc->rip = (unsigned)*((double*)(buffer->text + proc->rip));
 }
 
 //------------------------------------------------------------------------------------------------------
 
 void ret (CPU* proc, buff* buffer)
 {
-    assert(proc);
-    assert(buffer);
+    ASSERT_OK;
+
     double a = 0;
 
     pop_stack(proc->stack_call, &a);
