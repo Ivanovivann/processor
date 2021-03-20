@@ -28,11 +28,15 @@ void assembling (buff* buffer);
 
 int filling_commands(char* begin_buf, buff* buffer, label* labels, unsigned char* commands, unsigned count_labels);
 
-void jumps (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels);
-
 void no_arguments_handler (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels);
 
 void push_or_pop (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels);
+
+void jumps (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels);
+
+void control_filling (label* labels, char** tmp_labels, unsigned char* commands, int size_commands, int count_labels);
+
+void free_tmp_labels (char** tmp_labels);
 
 void print_in_file (unsigned char* arr_of_commands, int size);
 
@@ -130,45 +134,46 @@ void filling_buffer_without_tabs_and_other_symbols(char* intermediate_buffer, bu
 
 //------------------------------------------------------------------------------------------------------
 
-void jumps (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels)
+void assembling (buff* buffer)
 {
-    buffer->text += strlen(strtok(buffer->text, " ")) + 1;
-    char* token = strtok(buffer->text, "\n");
-    
-    commands[(*address)++] = command_number;
-    *((int*)(commands + (*address))) = -1;
+    char* token = buffer->text;
+    char* begin_buf = buffer->text;
 
-    for (int i = 0; i < count_labels; i++)
+    unsigned count_labels = 0;
+    unsigned count_commands = 0;
+
+    buffer->text++;
+
+    for (int i = 0; i < buffer->size - 1; i++)
     {
-        if(!labels[i].address)
-        {
-            break;
-        }
-        labels[i].name[strlen(labels[i].name) - 1] = 0;
-        if (labels[i].name && !strcmp(token, labels[i].name))
-        {
-            *((int*)(commands + (*address))) = labels[i].address;
-        }
-        labels[i].name[strlen(labels[i].name)] = ':';
+        if (buffer->text[i] == ':')
+            count_labels++;
+        if (buffer->text[i] == '\n' || buffer->text[i] == ' ')
+            count_commands++;
     }
 
-    if(*((int*)(commands + (*address))) == -1)
-    {
-        int num = 0;
-        for (num = 0; tmp_labels[num]; num++)
-            ;
+    label* labels = (label*) calloc (count_labels, sizeof(label));
+    unsigned char* commands = (unsigned char*) calloc(count_commands * 10, sizeof(char));         //10 потому что максимум push съест 10 байт в бинарнике
 
-        tmp_labels[num] = (char*) calloc((strlen(token) + 1), sizeof(char));
-        
-        for (int i = 0; i < strlen(token); i++)
-        {
-            tmp_labels[num][i] = token[i];
-        }
-    }
+    int size = filling_commands(begin_buf, buffer, labels, commands, count_labels);
 
-    (*address) += 4;
-    buffer->text += strlen(token);
+    print_in_file(commands, size);
+
+    buffer->text = begin_buf;
+    free(labels);
+    free(commands);
+
     return;
+}
+
+//------------------------------------------------------------------------------------------------------
+
+void no_arguments_handler (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels)
+{
+    commands[(*address)++] = command_number;
+
+    buffer->text += strlen(strtok(buffer->text, "\n"));
+
 }
 
 //------------------------------------------------------------------------------------------------------
@@ -239,45 +244,44 @@ void push_or_pop (unsigned char* commands, buff* buffer, int command_number, uns
 
 //------------------------------------------------------------------------------------------------------
 
-void no_arguments_handler (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels)
+void jumps (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels)
 {
+    buffer->text += strlen(strtok(buffer->text, " ")) + 1;
+    char* token = strtok(buffer->text, "\n");
+
     commands[(*address)++] = command_number;
+    *((int*)(commands + (*address))) = -1;
 
-    buffer->text += strlen(strtok(buffer->text, "\n"));
-
-}
-
-//------------------------------------------------------------------------------------------------------
-
-void assembling (buff* buffer)
-{
-    char* token = buffer->text;
-    char* begin_buf = buffer->text;
-
-    unsigned count_labels = 0;
-    unsigned count_commands = 0;
-
-    buffer->text++;
-
-    for (int i = 0; i < buffer->size - 1; i++)
+    for (int i = 0; i < count_labels; i++)
     {
-        if (buffer->text[i] == ':')
-            count_labels++;
-        if (buffer->text[i] == '\n' || buffer->text[i] == ' ')
-            count_commands++;
+        if(!labels[i].address)
+        {
+            break;
+        }
+        labels[i].name[strlen(labels[i].name) - 1] = 0;
+        if (labels[i].name && !strcmp(token, labels[i].name))
+        {
+            *((int*)(commands + (*address))) = labels[i].address;
+        }
+        labels[i].name[strlen(labels[i].name)] = ':';
     }
 
-    label* labels = (label*) calloc (count_labels, sizeof(label));
-    unsigned char* commands = (unsigned char*) calloc(count_commands * 10, sizeof(char));         //10 потому что максимум push съест 10 байт в бинарнике
+    if(*((int*)(commands + (*address))) == -1)
+    {
+        int num = 0;
+        for (num = 0; tmp_labels[num]; num++)
+            ;
 
-    int size = filling_commands(begin_buf, buffer, labels, commands, count_labels);
+        tmp_labels[num] = (char*) calloc((strlen(token) + 1), sizeof(char));
+        
+        for (int i = 0; i < strlen(token); i++)
+        {
+            tmp_labels[num][i] = token[i];
+        }
+    }
 
-    print_in_file(commands, size);
-
-    buffer->text = begin_buf;
-    free(labels);
-    free(commands);
-
+    (*address) += 4;
+    buffer->text += strlen(token);
     return;
 }
 
@@ -297,7 +301,7 @@ int filling_commands(char* begin_buf, buff* buffer, label* labels, unsigned char
         #define CPU(name_of_command, name_code_of_command, code_of_command, in_handler, out_handler, cpu_func)  \
         if (!strcmp(token, name_of_command) || !strcmp(strtok(token, " "), name_of_command))                    \
         {                                                                                                       \
-            in_handler(commands, buffer, code_of_command, &current_address, labels, count_labels, tmp_labels);              \
+            in_handler(commands, buffer, code_of_command, &current_address, labels, count_labels, tmp_labels);  \
             flag++;                                                                                             \
         }
         #include "commands.h"
@@ -322,9 +326,20 @@ int filling_commands(char* begin_buf, buff* buffer, label* labels, unsigned char
         buffer->text++;
     }
 
+    control_filling (labels, tmp_labels, commands, current_address, count_labels);
+
+    free_tmp_labels (tmp_labels);
+
+    return current_address;
+}
+
+//------------------------------------------------------------------------------------------------------
+
+void control_filling (label* labels, char** tmp_labels, unsigned char* commands, int size_commands, int count_labels)
+{
     int counter = 0;
 
-    for (int i = 0; (i <= current_address) && tmp_labels[counter]; i++)
+    for (int i = 0; (i <= size_commands) && tmp_labels[counter]; i++)
     {
         if (commands[i] == 5 || commands[i] == 6)
         {
@@ -351,8 +366,17 @@ int filling_commands(char* begin_buf, buff* buffer, label* labels, unsigned char
             i += sizeof(int);
         }
     }
+}
+//------------------------------------------------------------------------------------------------------
 
-    return current_address;
+void free_tmp_labels (char** tmp_labels)
+{
+    for (int i = 0; tmp_labels[i]; i++)
+    {
+        free(tmp_labels[i]);
+    }
+
+    free(tmp_labels);
 }
 
 //------------------------------------------------------------------------------------------------------
@@ -364,6 +388,11 @@ void print_in_file (unsigned char* arr_of_commands, int size)
 
     FILE* output = fopen("asm_out.txt", "wb");
     assert(output);
+
+    // for (int i = 0; i < size; i++)
+    // {
+    //     fprintf(output, "%d\n", arr_of_commands[i]);
+    // }
     
     fwrite(arr_of_commands, size, sizeof(char), output);
 
