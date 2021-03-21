@@ -163,8 +163,6 @@ void push (CPU* proc, buff* buffer)
 {
     ASSERT_OK;
 
-    
-
     if (buffer->text[proc->rip] & (1 << 7))
     {
         switch ((buffer->text[proc->rip] & (7 << 4)) >> 4)
@@ -184,7 +182,14 @@ void push (CPU* proc, buff* buffer)
                 proc->rip += sizeof(double);
                 break;
             case 7:                                 // RAM, register and number
-                push_stack (proc->stack_data, proc->RAM[(int)(*(double*)(buffer->text + proc->rip + 1)) + (int)proc->registers[(buffer->text[proc->rip] & (3 << 2)) >> 2]]);
+                if(buffer->text[proc->rip] & (1 << 1))
+                {
+                    push_stack (proc->stack_data, proc->RAM[(int)proc->registers[(buffer->text[proc->rip] & (3 << 2)) >> 2] + (int)(*(double*)(buffer->text + proc->rip + 1))]);
+                }
+                else
+                {
+                    push_stack (proc->stack_data, proc->RAM[(int)proc->registers[(buffer->text[proc->rip] & (3 << 2)) >> 2] - (int)(*(double*)(buffer->text + proc->rip + 1))]);
+                }
                 proc->rip += sizeof(double);
                 break;
             default:
