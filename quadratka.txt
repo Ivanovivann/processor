@@ -1,0 +1,118 @@
+    in
+    pop rax
+    in
+    pop rbx
+    in
+    pop rcx
+    
+    push 0
+    push rax
+    jne quadratic 
+    
+        call linear_equation
+        jmp absolutely_win
+
+    quadratic:
+        call quadratic_equation
+
+    absolutely_win:
+
+    hlt
+
+linear_equation:
+    push rbx
+    push 0
+    je b_is_0
+
+        push rcx
+        push rbx
+        div
+        push -1
+        mul
+        out
+        jmp end_linear
+
+    b_is_0:
+        push rcx
+        push 0
+        je c_is_0
+
+            roots_not_exist:
+                push 1
+                push 0
+                div
+                push 0
+                mul
+                out
+                jmp end_linear
+
+        c_is_0:
+
+            push 1
+            push 0
+            div
+            out
+            jmp end_linear
+    
+    end_linear:
+    ret
+
+quadratic_equation:
+    push rbx
+    push rbx
+    mul
+    push 4
+    push rax
+    push rcx
+    mul
+    mul
+    sub
+
+    pop rdx
+    push rdx
+    push 0
+    
+    jb roots_not_exist
+
+    push rdx
+    push 0
+    
+    ja two_roots
+        push rbx
+        push rax
+        push 2
+        mul
+        div
+        push -1
+        mul
+        out
+        jmp end_quadratic
+
+    two_roots:
+        push rdx
+        fsqrt
+        pop rdx
+        push rdx
+        push rbx
+        push -1
+        mul
+        add
+        push 2
+        push rax
+        mul
+        div
+        out
+
+        push rbx
+        push -1
+        mul
+        push rdx
+        sub
+        push 2
+        push rax
+        mul
+        div
+        out
+
+    end_quadratic:
+    ret
