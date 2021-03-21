@@ -4,22 +4,32 @@
 #include <ctype.h>
 #include <assert.h>
 
-#define ASSERT_IN_FUNC  assert(commands);       \
-                        assert(buffer);         \
-                        assert(labels);         \
-                        assert(tmp_labels);
-
 //------------------------------------------------------------------------------------------------------
 
 typedef struct{
     char* text;
     size_t size;
+    char* begin_text;
 }buff;
 
 typedef struct{
     char* name;
     int address;
 }label;
+
+typedef struct{
+    label* arr_labels;
+    size_t count_labels;
+    char** tmp_labels;
+}all_about_labels;
+
+//------------------------------------------------------------------------------------------------------
+
+#define ASSERT_IN_FUNC  assert(commands);               \
+                        assert(buffer);                 \
+                        assert(labels);                 \
+                        assert(labels->tmp_labels);     \
+                        assert(labels->arr_labels);
 
 //------------------------------------------------------------------------------------------------------
 
@@ -31,15 +41,15 @@ void filling_buffer_without_tabs_and_other_symbols (char* intermediate_buffer, b
 
 void assembling (buff* buffer);
 
-int filling_commands(char* begin_buf, buff* buffer, label* labels, unsigned char* commands, unsigned count_labels);
+int filling_commands(buff* buffer, all_about_labels* labels, unsigned char* commands);
 
-void no_arguments_handler (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels);
+void no_arguments_handler (unsigned char* commands, buff* buffer, int command_number, unsigned* address, all_about_labels* labels);
 
-void push_or_pop (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels);
+void push_or_pop (unsigned char* commands, buff* buffer, int command_number, unsigned* address, all_about_labels* labels);
 
-void jumps (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels);
+void jumps (unsigned char* commands, buff* buffer, int command_number, unsigned* address, all_about_labels* labels);
 
-void control_filling (label* labels, char** tmp_labels, unsigned char* commands, int size_commands, int count_labels);
+void control_filling (unsigned char* commands, int size_commands, all_about_labels* labels);
 
 void free_tmp_labels (char** tmp_labels);
 
@@ -133,6 +143,7 @@ void filling_buffer_without_tabs_and_other_symbols(char* intermediate_buffer, bu
         current_size++;
     }
     buffer->text = (char*) realloc(buffer->text, (current_size + 1) * sizeof(char));
+    buffer->begin_text = buffer->text;
     buffer->size = current_size + 1;
     buffer->text[current_size] = '\n';
 }
@@ -143,10 +154,9 @@ void assembling (buff* buffer)
 {
     assert(buffer);
 
+    all_about_labels labels = {};
     char* token = buffer->text;
-    char* begin_buf = buffer->text;
 
-    unsigned count_labels = 0;
     unsigned count_commands = 0;
 
     buffer->text++;
@@ -154,20 +164,20 @@ void assembling (buff* buffer)
     for (int i = 0; i < buffer->size - 1; i++)
     {
         if (buffer->text[i] == ':')
-            count_labels++;
-        if (buffer->text[i] == '\n' || buffer->text[i] == ' ')
+            (labels.count_labels)++;
+        if (buffer->text[i] == '\n')
             count_commands++;
     }
 
-    label* labels = (label*) calloc (count_labels, sizeof(label));
+    labels.arr_labels = (label*) calloc (labels.count_labels, sizeof(label));
     unsigned char* commands = (unsigned char*) calloc(count_commands * 10, sizeof(char));         //10 потому что максимум push съест 10 байт в бинарнике
 
-    int size = filling_commands(begin_buf, buffer, labels, commands, count_labels);
+    int size = filling_commands(buffer, &labels, commands);
 
     print_in_file(commands, size);
 
-    buffer->text = begin_buf;
-    free(labels);
+    buffer->text = buffer->begin_text;
+    free(labels.arr_labels);
     free(commands);
 
     return;
@@ -175,7 +185,7 @@ void assembling (buff* buffer)
 
 //------------------------------------------------------------------------------------------------------
 
-void no_arguments_handler (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels)
+void no_arguments_handler (unsigned char* commands, buff* buffer, int command_number, unsigned* address, all_about_labels* labels)
 {
     ASSERT_IN_FUNC;
 
@@ -187,7 +197,7 @@ void no_arguments_handler (unsigned char* commands, buff* buffer, int command_nu
 
 //------------------------------------------------------------------------------------------------------
 
-void push_or_pop (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels)
+void push_or_pop (unsigned char* commands, buff* buffer, int command_number, unsigned* address, all_about_labels* labels)
 {
     ASSERT_IN_FUNC;
 
@@ -203,7 +213,7 @@ void push_or_pop (unsigned char* commands, buff* buffer, int command_number, uns
 
         token = strtok(buffer->text, "\n");
     }
-    
+
     for (int i = 0; i < strlen(token); i++)
     {
         if (token[i] == '[')
@@ -255,7 +265,7 @@ void push_or_pop (unsigned char* commands, buff* buffer, int command_number, uns
 
 //------------------------------------------------------------------------------------------------------
 
-void jumps (unsigned char* commands, buff* buffer, int command_number, unsigned* address, label* labels, unsigned count_labels, char** tmp_labels)
+void jumps (unsigned char* commands, buff* buffer, int command_number, unsigned* address, all_about_labels* labels)
 {
     ASSERT_IN_FUNC;
 
@@ -265,31 +275,32 @@ void jumps (unsigned char* commands, buff* buffer, int command_number, unsigned*
     commands[(*address)++] = command_number;
     *((double*)(commands + (*address))) = -1;
 
-    for (int i = 0; i < count_labels; i++)
+    for (int i = 0; i < labels->count_labels; i++)
     {
-        if(!labels[i].address)
+        if(!(labels->arr_labels)[i].address)
         {
             break;
         }
-        labels[i].name[strlen(labels[i].name) - 1] = 0;
-        if (labels[i].name && !strcmp(token, labels[i].name))
+        (labels->arr_labels)[i].name[strlen((labels->arr_labels)[i].name) - 1] = 0;
+
+        if ((labels->arr_labels)[i].name && !strcmp(token, (labels->arr_labels)[i].name))
         {
-            *((double*)(commands + (*address))) = labels[i].address;
+            *((double*)(commands + (*address))) = (labels->arr_labels)[i].address;
         }
-        labels[i].name[strlen(labels[i].name)] = ':';
+        (labels->arr_labels)[i].name[strlen((labels->arr_labels)[i].name)] = ':';
     }
 
     if(*((double*)(commands + (*address))) == -1)
     {
         int num = 0;
-        for (num = 0; tmp_labels[num]; num++)
+        for (num = 0; labels->tmp_labels[num]; num++)
             ;
 
-        tmp_labels[num] = (char*) calloc((strlen(token) + 1), sizeof(char));
+        labels->tmp_labels[num] = (char*) calloc((strlen(token) + 1), sizeof(char));
         
         for (int i = 0; i < strlen(token) && !isspace(token[i]); i++)
         {
-            tmp_labels[num][i] = token[i];
+            labels->tmp_labels[num][i] = token[i];
         }
     }
 
@@ -300,7 +311,7 @@ void jumps (unsigned char* commands, buff* buffer, int command_number, unsigned*
 
 //------------------------------------------------------------------------------------------------------
 
-int filling_commands(char* begin_buf, buff* buffer, label* labels, unsigned char* commands, unsigned count_labels)
+int filling_commands(buff* buffer, all_about_labels* labels, unsigned char* commands)
 {
     assert(buffer);
     assert(labels);
@@ -310,15 +321,15 @@ int filling_commands(char* begin_buf, buff* buffer, label* labels, unsigned char
     int current_line = 1;
     unsigned current_address = 0;
     int current_label_number = 0;
-    char** tmp_labels = (char**) calloc (1000, sizeof(char*));
+    labels->tmp_labels = (char**) calloc (1000, sizeof(char*));
 
-    while (begin_buf + buffer->size - buffer->text - 1 > 0 && (token = strtok(buffer->text, "\n")) != NULL)
+    while (buffer->begin_text + buffer->size - buffer->text - 1 > 0 && (token = strtok(buffer->text, "\n")) != NULL)
     {
         int flag = 0;
         #define CPU(name_of_command, name_code_of_command, code_of_command, in_handler, out_handler, cpu_func)  \
         if (!strcmp(token, name_of_command) || !strcmp(strtok(token, " "), name_of_command))                    \
         {                                                                                                       \
-            in_handler(commands, buffer, code_of_command, &current_address, labels, count_labels, tmp_labels);  \
+            in_handler(commands, buffer, code_of_command, &current_address, labels);                            \
             flag++;                                                                                             \
         }
         #include "commands.h"
@@ -327,8 +338,8 @@ int filling_commands(char* begin_buf, buff* buffer, label* labels, unsigned char
         if (token[strlen(token) - 1] == ':')
         {
             flag++;
-            labels[current_label_number].name = token;
-            labels[current_label_number].address = current_address;
+            labels->arr_labels[current_label_number].name = token;
+            labels->arr_labels[current_label_number].address = current_address;
             current_label_number++;
 
             buffer->text += strlen(token);
@@ -336,31 +347,32 @@ int filling_commands(char* begin_buf, buff* buffer, label* labels, unsigned char
         
         if (!flag)
         {
-            printf("error on line %d\n", current_line);
+            printf("error on line %d || you write |%s|\n", current_line, token);
         }
         current_line++;
 
         buffer->text++;
     }
 
-    control_filling (labels, tmp_labels, commands, current_address, count_labels);
+    control_filling (commands, current_address, labels);
 
-    free_tmp_labels (tmp_labels);
+    free_tmp_labels (labels->tmp_labels);
 
     return current_address;
 }
 
 //------------------------------------------------------------------------------------------------------
 
-void control_filling (label* labels, char** tmp_labels, unsigned char* commands, int size_commands, int count_labels)
+void control_filling (unsigned char* commands, int size_commands, all_about_labels* labels)
 {
     assert(labels);
-    assert(tmp_labels);
+    assert(labels->arr_labels);
+    assert(labels->tmp_labels);
     assert(commands);
 
     int counter = 0;
 
-    for (int i = 0; (i <= size_commands) && tmp_labels[counter]; i++)
+    for (int i = 0; (i <= size_commands) && labels->tmp_labels[counter]; i++)
     {
         if (commands[i] == 5 || commands[i] == 6) // push or pop
         {
@@ -373,18 +385,19 @@ void control_filling (label* labels, char** tmp_labels, unsigned char* commands,
         }
         if ((int)(commands[i] / 10) == 7 && *((double*)(commands + i + 1)) == -1)
         {
-            for (int j = 0; j < count_labels; j++)
+            // printf("in jump %d\n", commands[i]);
+            for (int j = 0; j < labels->count_labels; j++)
             {
-                labels[j].name[strlen(labels[j].name) - 1] = 0;
+                (labels->arr_labels)[j].name[strlen((labels->arr_labels)[j].name) - 1] = 0;
 
-                if (!strcmp(tmp_labels[counter], labels[j].name))
+                if (!strcmp(labels->tmp_labels[counter], (labels->arr_labels)[j].name))
                 {
                     counter++;
-                    *((double*)(commands + i + 1)) = labels[j].address;
-                    labels[j].name[strlen(labels[j].name)] = ':';
+                    *((double*)(commands + i + 1)) = (labels->arr_labels)[j].address;
+                    (labels->arr_labels)[j].name[strlen((labels->arr_labels)[j].name)] = ':';
                     break;
                 }
-                labels[j].name[strlen(labels[j].name)] = ':';
+                (labels->arr_labels)[j].name[strlen((labels->arr_labels)[j].name)] = ':';
             }
             i += sizeof(double);
         }
@@ -394,12 +407,14 @@ void control_filling (label* labels, char** tmp_labels, unsigned char* commands,
 
 void free_tmp_labels (char** tmp_labels)
 {
+    assert(tmp_labels);
     for (int i = 0; tmp_labels[i]; i++)
     {
         free(tmp_labels[i]);
     }
 
     free(tmp_labels);
+    tmp_labels = nullptr;
 }
 
 //------------------------------------------------------------------------------------------------------
@@ -411,6 +426,11 @@ void print_in_file (unsigned char* arr_of_commands, int size)
 
     FILE* output = fopen("asm_out.txt", "wb");
     assert(output);
+
+    // for (int i = 0; i < size; i++)
+    // {
+    //     printf("%d: %d\n", i, arr_of_commands[i]);
+    // }
     
     fwrite(arr_of_commands, size, sizeof(char), output);
 
@@ -422,6 +442,7 @@ void print_in_file (unsigned char* arr_of_commands, int size)
 void free_buffer (buff* buffer)
 {
     assert(buffer);
+    assert(buffer->text);
     free(buffer->text);
     buffer->text = nullptr;
 }
