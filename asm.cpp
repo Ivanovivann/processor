@@ -116,7 +116,7 @@ void filling_buffer_without_tabs_and_other_symbols(char* intermediate_buffer, bu
     int current_size = 1;
     int i = 0;
 
-    while (intermediate_buffer[i] == 9 || intermediate_buffer[i] == ' ')
+    while (intermediate_buffer[i] == 9 || intermediate_buffer[i] == ' ' || intermediate_buffer[i] == '\n')
         i++;
 
     for(; i < buffer->size; i++)
