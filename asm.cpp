@@ -197,7 +197,7 @@ void push_or_pop (unsigned char* commands, buff* buffer, int command_number, uns
 
     int len = strlen(token) + 1;
 
-    if (token[len] == '[' || isdigit(token[len]) || ((token[len] =='r') && (token[len + 2] =='x')))  // 5 is a length of push + 1
+    if (token[len] == '[' || isdigit(token[len]) || token[len] == '-' || ((token[len] =='r') && (token[len + 2] =='x')))  // 5 is a length of push + 1
     {
         buffer->text += strlen(token) + 1;
 
@@ -211,7 +211,7 @@ void push_or_pop (unsigned char* commands, buff* buffer, int command_number, uns
             commands[*(address)] |= 1 << 6;    
         }
 
-        if (isdigit(token[i]) && !(commands[*(address)] & (1 << 5)))
+        if ((isdigit(token[i]) || token[i] == '-') && !(commands[*(address)] & (1 << 5)))
         {
             commands[*(address)] |= 1 << 5;
             *((double*)(commands + (*address) + 1)) = atof(&(token[i]));
@@ -287,7 +287,7 @@ void jumps (unsigned char* commands, buff* buffer, int command_number, unsigned*
 
         tmp_labels[num] = (char*) calloc((strlen(token) + 1), sizeof(char));
         
-        for (int i = 0; i < strlen(token); i++)
+        for (int i = 0; i < strlen(token) && !isspace(token[i]); i++)
         {
             tmp_labels[num][i] = token[i];
         }
@@ -362,13 +362,14 @@ void control_filling (label* labels, char** tmp_labels, unsigned char* commands,
 
     for (int i = 0; (i <= size_commands) && tmp_labels[counter]; i++)
     {
-        if (commands[i] == 5 || commands[i] == 6)
+        if (commands[i] == 5 || commands[i] == 6) // push or pop
         {
             i++;
-            if (commands[i + 1] & (1 << 5))
+            if (commands[i] & (1 << 5))         // bit of number mod
             {
                 i += sizeof(double);
             }
+            continue;
         }
         if ((int)(commands[i] / 10) == 7 && *((double*)(commands + i + 1)) == -1)
         {
@@ -380,6 +381,7 @@ void control_filling (label* labels, char** tmp_labels, unsigned char* commands,
                 {
                     counter++;
                     *((double*)(commands + i + 1)) = labels[j].address;
+                    labels[j].name[strlen(labels[j].name)] = ':';
                     break;
                 }
                 labels[j].name[strlen(labels[j].name)] = ':';
@@ -409,11 +411,6 @@ void print_in_file (unsigned char* arr_of_commands, int size)
 
     FILE* output = fopen("asm_out.txt", "wb");
     assert(output);
-
-    // for (int i = 0; i < size; i++)
-    // {
-    //     printf("%d: %d\n", i, arr_of_commands[i]);
-    // }
     
     fwrite(arr_of_commands, size, sizeof(char), output);
 
