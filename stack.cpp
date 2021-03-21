@@ -42,7 +42,7 @@ enum Stack_error verificator (Stack* stack)
     if (stack == NULL) {
         return stack_nullptr;
     }
-    if (stack->size >= stack->capacity || (stack->size > 0 && ((type_of_stack *)(stack->data))[stack->size - 1] != ((type_of_stack *)(stack->data))[stack->size - 1])) {
+    if (stack->size >= stack->capacity /* || (stack->size > 0 && ((type_of_stack *)(stack->data))[stack->size - 1] != ((type_of_stack *)(stack->data))[stack->size - 1])*/) {
         return bad_size;
     }
     if (stack->data == NULL) {
