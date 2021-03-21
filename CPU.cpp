@@ -163,6 +163,8 @@ void push (CPU* proc, buff* buffer)
 {
     ASSERT_OK;
 
+    
+
     if (buffer->text[proc->rip] & (1 << 7))
     {
         switch ((buffer->text[proc->rip] & (7 << 4)) >> 4)
@@ -435,6 +437,14 @@ void call (CPU* proc, buff* buffer)
 
     push_stack(proc->stack_call, (double)(proc->rip + sizeof(double)));
     proc->rip = (unsigned)*((double*)(buffer->text + proc->rip));
+}
+
+//------------------------------------------------------------------------------------------------------
+
+void nop (CPU* proc, buff* buffer)
+{
+    ASSERT_OK;
+    printf("WHY AM I EXIST???\n");
 }
 
 //------------------------------------------------------------------------------------------------------
