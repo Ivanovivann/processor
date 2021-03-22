@@ -221,7 +221,7 @@ void push_or_pop (unsigned char* commands, buff* buffer, int command_number, uns
             commands[*(address)] |= 1 << 6;    
         }
 
-        if ((isdigit(token[i]) || token[i] == '-') && !(commands[*(address)] & (1 << 5)))
+        if ((isdigit(token[i]) || (token[i] == '-' && isdigit(token[i + 1]))) && !(commands[*(address)] & (1 << 5)))
         {
             commands[*(address)] |= 1 << 5;
             *((double*)(commands + (*address) + 1)) = atof(&(token[i]));
@@ -385,7 +385,6 @@ void control_filling (unsigned char* commands, int size_commands, all_about_labe
         }
         if ((int)(commands[i] / 10) == 7 && *((double*)(commands + i + 1)) == -1)
         {
-            // printf("in jump %d\n", commands[i]);
             for (int j = 0; j < labels->count_labels; j++)
             {
                 (labels->arr_labels)[j].name[strlen((labels->arr_labels)[j].name) - 1] = 0;
