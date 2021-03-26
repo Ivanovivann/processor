@@ -1,0 +1,101 @@
+    in
+    pop rdx
+
+    push 399
+    pop rbx
+L1:
+    push 399
+    pop rcx
+    
+    push rdx
+
+    L2:
+        push rdx
+        push rdx
+        push rdx
+        mul
+        push rbx
+        push 200
+        sub
+        push rbx
+        push 200
+        sub
+        mul
+        push rcx
+        push 200
+        sub
+        push rcx
+        push 200
+        sub
+        mul
+        add
+        pop rdx
+        push rdx
+        
+        jbe not_circle
+            push rbx
+            push 400
+            mul
+            push rcx
+            add
+            push 3
+            mul
+            pop rax
+            
+            push 255
+            push rdx
+            push 156.86
+            div
+            sub
+            pop rdx
+            push rdx
+            pop [rax]
+            push rdx
+            pop [rax + 1]
+            push rdx
+            pop [rax + 2]
+            jmp exitL2
+
+        not_circle:
+            push rbx
+            push 400
+            mul
+            push rcx
+            add
+            push 3
+            mul
+            pop rax
+            push 800
+            push 156.86
+            div
+            pop rdx
+            push rdx
+            pop [rax]
+            push rdx
+            pop [rax + 1]
+            push rdx
+            pop [rax + 2]
+
+        exitL2:
+        pop rdx
+        push rcx
+        push 1
+        sub
+        pop rcx
+        push rcx
+        push 0
+        jne L2
+
+    pop rdx
+    push rbx
+    push 1
+    sub
+    pop rbx
+    push rbx
+    push 0
+    jne L1
+
+    open_draw
+    draw
+
+    hlt
