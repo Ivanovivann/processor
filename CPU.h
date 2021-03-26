@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <math.h>
 #include "stack.h"
+#include "TXLib.h"
 
 #define ASSERT_OK   assert(proc);       \
                     assert(buffer);
@@ -75,6 +76,14 @@ void je (CPU* proc, buff* buffer);
 void jne (CPU* proc, buff* buffer);
 
 void call (CPU* proc, buff* buffer);
+
+void nop (CPU* proc, buff* buffer);
+
+void draw_circle (CPU* proc, buff* buffer);
+
+void open_draw (CPU* proc, buff* buffer);
+
+void draw (CPU* proc, buff* buffer);
 
 void ret (CPU* proc, buff* buffer);
 
