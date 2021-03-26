@@ -170,6 +170,7 @@ void assembling (buff* buffer)
     }
 
     labels.arr_labels = (label*) calloc (labels.count_labels, sizeof(label));
+    labels.tmp_labels = (char**) calloc (count_commands, sizeof(char*));
     unsigned char* commands = (unsigned char*) calloc(count_commands * 10, sizeof(char));         //10 потому что максимум push съест 10 байт в бинарнике
 
     int size = filling_commands(buffer, &labels, commands);
@@ -321,7 +322,6 @@ int filling_commands(buff* buffer, all_about_labels* labels, unsigned char* comm
     int current_line = 1;
     unsigned current_address = 0;
     int current_label_number = 0;
-    labels->tmp_labels = (char**) calloc (1000, sizeof(char*));
 
     while (buffer->begin_text + buffer->size - buffer->text - 1 > 0 && (token = strtok(buffer->text, "\n")) != NULL)
     {
@@ -385,12 +385,14 @@ void control_filling (unsigned char* commands, int size_commands, all_about_labe
         }
         if ((int)(commands[i] / 10) == 7 && *((double*)(commands + i + 1)) == -1)
         {
+            int presence_of_label = 0;
             for (int j = 0; j < labels->count_labels; j++)
             {
                 (labels->arr_labels)[j].name[strlen((labels->arr_labels)[j].name) - 1] = 0;
-
+                
                 if (!strcmp(labels->tmp_labels[counter], (labels->arr_labels)[j].name))
                 {
+                    presence_of_label++;
                     counter++;
                     *((double*)(commands + i + 1)) = (labels->arr_labels)[j].address;
                     (labels->arr_labels)[j].name[strlen((labels->arr_labels)[j].name)] = ':';
@@ -399,6 +401,13 @@ void control_filling (unsigned char* commands, int size_commands, all_about_labe
                 (labels->arr_labels)[j].name[strlen((labels->arr_labels)[j].name)] = ':';
             }
             i += sizeof(double);
+            
+            if(presence_of_label == 0)
+            {
+                // printf("%s\n", labels->tmp_labels[counter]);
+                printf("label wasn't found |%s|\n", labels->tmp_labels[counter]);
+                counter++;
+            }
         }
     }
 }
