@@ -13,7 +13,7 @@ void CPU_construct (CPU* proc)
     construct_stack(proc->stack_call);
     proc->registers = (double*) calloc(4, sizeof(double));
     assert(proc->registers);
-    proc->RAM = (double*) calloc(2000, sizeof(double));
+    proc->RAM = (double*) calloc(400*400*3 + 1, sizeof(double));
     assert(proc->RAM);
 }
 
@@ -88,7 +88,7 @@ void processor_doing_brrr (CPU* proc, buff* buffer)
 
             #include "commands.h"
             #undef CPU
-        }
+        } 
     }
 }
 
@@ -162,8 +162,6 @@ void div (CPU* proc, buff* buffer)
 void push (CPU* proc, buff* buffer)
 {
     ASSERT_OK;
-
-    
 
     if (buffer->text[proc->rip] & (1 << 7))
     {
@@ -250,8 +248,8 @@ void pow (CPU* proc, buff* buffer)
 
     double a = 0, b = 0;
 
-    pop_stack(proc->stack_data, &a);
     pop_stack(proc->stack_data, &b);
+    pop_stack(proc->stack_data, &a);
 
     push_stack(proc->stack_data, pow(a, b));
 }
@@ -445,6 +443,46 @@ void nop (CPU* proc, buff* buffer)
 {
     ASSERT_OK;
     printf("WHY AM I EXIST???\n");
+}
+
+//------------------------------------------------------------------------------------------------------
+
+void draw_circle (CPU* proc, buff* buffer)
+{
+    double a = 0;
+    pop_stack(proc->stack_data, &a);
+    printf("%lg\n", a);
+    for(int i = 1; i <= 400; i++)
+    {
+        for(int j = 1; j <= 400; j++)
+        {
+            if((i - 200) * (i - 200) + (j - 200) * (j - 200) <= a*a)
+                txSetPixel(j, i, TX_RED);
+            else
+                txSetPixel(j, i, TX_ORANGE);
+        }
+        txRedrawWindow();
+    }
+}
+
+//------------------------------------------------------------------------------------------------------
+
+void open_draw (CPU* proc, buff* buffer)
+{
+    txCreateWindow(400, 400);
+}
+
+//------------------------------------------------------------------------------------------------------
+
+void draw (CPU* proc, buff* buffer)
+{
+    for(int i = 0; i < 400*400; i++)
+    {
+        txSetPixel(i % 400, i / 400, RGB((int)proc->RAM[3* i], (int)proc->RAM[3* i + 1], (int)proc->RAM[3* i + 2]));
+        
+        if (i % 1600 == 0)
+            txRedrawWindow();
+    }
 }
 
 //------------------------------------------------------------------------------------------------------
